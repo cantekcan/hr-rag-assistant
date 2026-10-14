@@ -1,0 +1,54 @@
+[
+  {
+    "id": "annual-leave-5-years",
+    "question": "5 yıldır çalışıyorum, kaç gün yıllık izin hakkım var?",
+    "expected_sections": ["5.7.4.1"],
+    "expected_keywords": [["14", "on dört"]]
+  },
+  {
+    "id": "marriage-leave",
+    "question": "Evlenirsem kaç gün izin alırım?",
+    "expected_sections": ["5.7.5.1.1"],
+    "expected_keywords": [["3", "üç"]]
+  },
+  {
+    "id": "probation-period",
+    "question": "Deneme süresi ne kadar?",
+    "expected_sections": ["5.3.2"],
+    "expected_keywords": [["2 ay", "iki ay"]]
+  },
+  {
+    "id": "weekly-working-hours",
+    "question": "Haftada kaç saat çalışıyoruz?",
+    "expected_sections": ["5.7.1"],
+    "expected_keywords": [["45", "kırk beş"]]
+  },
+  {
+    "id": "bereavement-leave",
+    "question": "Annem vefat etti, kaç gün izin kullanabilirim?",
+    "expected_sections": ["5.7.5.1.2"],
+    "expected_keywords": [["3", "üç"]]
+  },
+  {
+    "id": "child-marriage-leave",
+    "question": "Kızım evleniyor, izin alabilir miyim?",
+    "expected_sections": ["5.7.5.1.3"],
+    "expected_keywords": [["2", "iki"]]
+  },
+  {
+    "id": "birth-leave-both-parents",
+    "question": "Karım doğum yaptı, ikimiz ne kadar izin alabiliriz?",
+    "expected_sections": ["5.7.5.1", "5.7.5.1.1", "5.7.8.3"],
+    "expected_keywords": [["8", "sekiz"], ["1,5", "bir buçuk"], ["6", "altı"], ["3", "üç"]]
+  },
+  {
+    "id": "meal-card-not-in-document",
+    "question": "Yemek kartına ne kadar yükleniyor?",
+    "expect_no_answer": true
+  },
+  {
+    "id": "company-car-not-in-document",
+    "question": "Şirket bana araç veriyor mu?",
+    "expect_no_answer": true
+  }
+]
