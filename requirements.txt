@@ -1,0 +1,6 @@
+google-genai
+numpy
+pypdf
+python-dotenv
+ipykernel
+chromadb

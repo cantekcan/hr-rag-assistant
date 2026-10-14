@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Virtual environment
+.venv/
+
+# Source documents (third-party content, not committed)
+documents/
+
+# Generated files
+vectors.npy
+__pycache__/
+.ipynb_checkpoints/
+chroma_db/
