@@ -4,3 +4,4 @@ pypdf
 python-dotenv
 ipykernel
 chromadb
+pydantic
