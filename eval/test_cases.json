@@ -9,7 +9,8 @@
     "id": "marriage-leave",
     "question": "Evlenirsem kaç gün izin alırım?",
     "expected_sections": ["5.7.5.1.1"],
-    "expected_keywords": [["3", "üç"]]
+    "expected_keywords": [["3", "üç"]],
+    "forbidden_keywords": ["çocuğ"]
   },
   {
     "id": "probation-period",
@@ -50,5 +51,11 @@
     "id": "company-car-not-in-document",
     "question": "Şirket bana araç veriyor mu?",
     "expect_no_answer": true
+  },
+  {
+    "id": "pregnancy-leave-and-severance",
+    "question": "çok heycanlıyım karım gebe, o da burada çalışıyor, biz ne kadar izin alacağız ve karım gebelikten sonra ayrılacak tazminatını hesaplar mısın",
+    "expected_sections": ["5.7.5.1", "5.7.5.1.1", "5.7.8.3"],
+    "expected_keywords": [["8", "sekiz"], ["1,5", "bir buçuk"], ["6", "altı"], ["3", "üç"]]
   }
 ]
