@@ -1,8 +1,6 @@
-google-genai
-numpy
-pypdf
-python-dotenv
-ipykernel
-chromadb
-pydantic
-fastapi[standard]
+chromadb==1.5.9
+fastapi[standard]==0.143.1
+google-genai==2.30.1
+pydantic==2.14.1
+pypdf==6.20.1
+python-dotenv==1.2.4
