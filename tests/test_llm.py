@@ -36,8 +36,8 @@ def api_error(code: int) -> errors.APIError:
     return errors.APIError(code, {"error": {"message": "test"}})
 
 
-def response(text: str | None = "{}") -> SimpleNamespace:
-    return SimpleNamespace(candidates=[object()], parsed=None, text=text)
+def response(text: str | None = "{}", model_version: str | None = None) -> SimpleNamespace:
+    return SimpleNamespace(candidates=[object()], parsed=None, text=text, model_version=model_version)
 
 
 CONFIG = types.GenerateContentConfig()
@@ -74,3 +74,17 @@ def test_unparseable_answer_is_an_error(fake):
     fake(response(text="not json"))
     with pytest.raises(llm.LLMError):
         llm.generate("q", schema=MessageIntent)
+
+
+def test_reports_the_model_that_answered(fake):
+    answered = response(text='{"intent": "other"}')
+    fake(api_error(503), answered)
+    _, model = llm.generate_with_model("q", schema=MessageIntent)
+    assert model == "second"  # the fallback model, not the first one in the list
+    assert answered.model_version is None  # the SDK response is left as it came
+
+
+def test_reports_the_resolved_version_when_the_api_gives_it(fake):
+    fake(response(text='{"intent": "other"}', model_version="gemini-2.5-flash-lite"))
+    _, model = llm.generate_with_model("q", schema=MessageIntent)
+    assert model == "gemini-2.5-flash-lite"

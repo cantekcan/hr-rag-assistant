@@ -10,9 +10,18 @@ POST /ask  {"question": "Karım doğum yaptı, ikimiz ne kadar izin alabiliriz?"
   "sections": ["5.7.5.1.1", "5.7.5.1", "5.7.8.3"],
   "refused": false,
   "missing_info": [],
-  "tools_used": ["search_regulation: doğum izni", "search_regulation: babalık izni", "search_regulation: süt izni"]
+  "missing_info_note": null,
+  "tools_used": ["search_regulation: doğum izni", "search_regulation: babalık izni", "search_regulation: süt izni"],
+  "sources": [
+    {"section": "5.7.5.1.1", "page": 8, "path": "5. … > 5.7.5. Mazeret izni > 5.7.5.1. Doğum İzni",
+     "text": "5.7.5.1.1. Evlenmesi veya eşinin doğum yapması halinde üç gün,"},
+    …
+  ],
+  "model": "gemini-flash-lite-latest"
 }
 ```
+
+Every answer lists the regulation sections it is based on, with their text in `sources`. On the chat page, clicking a section opens its text, so the answer can be checked against the document.
 
 ## How it works
 
@@ -36,6 +45,8 @@ flowchart LR
 **Employee leave balance:** with an employee signed in, `get_my_leave_balance` returns years of service, entitled, used and remaining days. The tool takes no arguments: the employee comes from the session, so the model cannot request another person's record. Entitlement is calculated in code from the seniority table in section 5.7.4, never by the model, and the answer cites the matching rule. Employee data in `data/employees.json` is synthetic and stands in for an HR system.
 
 **Answering:** the model fills a typed schema (`can_answer`, `answer`, `used_sections`, `missing_info`). Decisions that must be reliable (refusal message, source list, "not covered" note) are made in code, not left to the prompt.
+
+**Chat page:** `/` serves a single page in plain HTML, CSS and JavaScript (no build step), with a demo employee selector, clickable source sections, a separate note for parts the regulation does not cover, and the searches the model made. Text from the server is always inserted as text, never as HTML. It uses system fonts, so the page makes no requests outside the server. The regulation PDF opens inside the page at the cited section's page (in a new tab on phones).
 
 **Failures:** quota, server and "model not found" errors are retried with fallback to the next model; bad requests and invalid keys fail immediately. Blocked or unparseable model output is reported as an error instead of a half-answer. The API returns 503 in all these cases, and `/health` returns 503 until the document has been indexed.
 
@@ -84,10 +95,12 @@ python -m hr_assistant.ingest      # index the document (safe to re-run)
 python -m hr_assistant.ask         # chat in the terminal
 python -m hr_assistant.ask --employee E1002   # signed in as a demo employee
 python -m hr_assistant.evaluate    # run the evaluation set
-uvicorn hr_assistant.api:app       # API with docs at http://127.0.0.1:8000/docs
+uvicorn hr_assistant.api:app       # chat page at http://127.0.0.1:8000, API docs at /docs
 ```
 
-API endpoints: `POST /ask` with an optional `employee_id`, `GET /employees` lists the demo employees, `GET /health`. In this demo the employee id comes in the request body; a real deployment would take it from the authenticated session.
+API endpoints: `POST /ask` with an optional `employee_id`, `GET /employees` lists the demo employees, `GET /document` returns the regulation PDF, `GET /health`. In this demo the employee id comes in the request body; a real deployment would take it from the authenticated session.
+
+The `/ask` response has the answer, the cited `sections` and their text in `sources`, the parts the regulation does not cover in `missing_info`, the tools the model used, and in `model` the model that wrote the answer (`null` for fixed replies such as greetings). The "not covered" sentence is part of `answer`, so a client that only shows `answer` never hides it; `missing_info_note` holds the same sentence for clients that show it separately.
 
 Unit tests: `pip install -r requirements-dev.txt`, then `pytest`.
 
@@ -104,8 +117,9 @@ hr_assistant/
 ├── tools.py       tool calling: regulation search and leave balance
 ├── employees.py   demo employee records and leave calculation
 ├── answer.py      prompt, structured answer, intent routing
-├── api.py         FastAPI: POST /ask, GET /employees, GET /health
+├── api.py         FastAPI: chat page at /, POST /ask, GET /employees, GET /document, GET /health
 ├── ask.py         terminal chat
+├── static/        chat page (index.html, style.css, app.js)
 └── evaluate.py    evaluation runner
 data/employees.json   synthetic demo employees
 eval/test_cases.json
@@ -114,12 +128,13 @@ tests/                unit tests
 
 ## About the data
 
-The regulation used during development is a third-party sample document and is not included in the repository. Any regulation numbered by section (`1.`, `1.1.`, `1.1.1.`) works with the same pipeline.
+The regulation used during development is a third-party sample document and is not included in the repository. `/document` serves whatever PDF is in `documents/`, so a public deployment should use a document you have the right to publish. Any regulation numbered by section (`1.`, `1.1.`, `1.1.1.`) works with the same pipeline.
 
 The seniority table in `employees.py` is copied from section 5.7.4 of that document (14 days up to 5 years, 20 days up to 15 years, 24 days after). It is not the Turkish Labour Law: the law gives 26 days from 15 years on and puts exactly 15 years in the top tier. Whether exactly 5 and 15 years belong to the lower or upper tier must be checked against the regulation's wording, and the table must be updated when a different regulation is used.
 
 ## Next steps
 
+- Conversation memory, so follow-up questions ("and for my wife?") keep their context
 - Tune the similarity threshold from measured scores and add hybrid (keyword + semantic) search
 - A held-out question set that is not used for tuning
 - Stable chunk ids so a changed regulation re-indexes cleanly (together with support for a second document)

@@ -1,4 +1,5 @@
 """Turns a question into a grounded answer: gather facts, structured answer, validation, routing."""
+import logging
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal
@@ -7,8 +8,10 @@ from pydantic import BaseModel, Field
 
 from hr_assistant import llm
 from hr_assistant.employees import Employee, LeaveBalance
-from hr_assistant.retrieval import SearchHit
+from hr_assistant.retrieval import RegulationSection, SearchHit, get_sections
 from hr_assistant.tools import gather
+
+logger = logging.getLogger(__name__)
 
 NO_ANSWER_TEXT = "Bu konuda bilgim yok. Detaylı bilgi için İnsan Kaynakları birimine başvurabilirsiniz."
 MISSING_INFO_TEXT = ("Yönetmelikte şu konularda bilgi bulunmuyor: {items}. "
@@ -25,7 +28,11 @@ class AnswerResult:
     sections: list[str] = field(default_factory=list)
     refused: bool = False  # True when the answer is not based on the document
     missing_info: list[str] = field(default_factory=list)
+    # The "not covered" sentence already appended to `answer`, so a UI can show it separately
+    missing_info_note: str | None = None
     tools_used: list[str] = field(default_factory=list)
+    sources: list[RegulationSection] = field(default_factory=list)  # text of the cited sections
+    model: str | None = None  # model that wrote the answer; None for fixed replies
 
 
 class HRAnswer(BaseModel):
@@ -99,17 +106,40 @@ def answer_question(question: str, employee: Employee | None = None,
 
     context = _format_context(facts.hits, facts.leave_balance)
     prompt = f"{ANSWER_INSTRUCTIONS}\n\nExcerpts:\n{context}\n\nQuestion: {question}"
-    result = llm.generate(prompt, schema=HRAnswer)
+    result, model = llm.generate_with_model(prompt, schema=HRAnswer)
     if not result.can_answer:
         return _refusal(question, facts.tools_used)
 
     answer = result.answer.strip()
+    note = None
     if result.missing_info:
-        answer += "\n\n" + MISSING_INFO_TEXT.format(items=", ".join(result.missing_info))
+        # Kept inside the answer text too, so a client that ignores missing_info still shows it
+        note = MISSING_INFO_TEXT.format(items=", ".join(result.missing_info))
+        answer += "\n\n" + note
 
-    retrieved = {h.section for h in facts.hits}
+    retrieved = {h.section: h for h in facts.hits}
     sections = [s for s in result.used_sections if s in retrieved]  # drop invented section numbers
     if result.used_leave_record and facts.leave_balance and facts.leave_balance.rule_section not in sections:
         sections.append(facts.leave_balance.rule_section)  # the record cites its rule, added by code
     return AnswerResult(answer=answer, sections=sections, missing_info=result.missing_info,
-                        tools_used=facts.tools_used)
+                        missing_info_note=note, tools_used=facts.tools_used,
+                        sources=_sources(sections, retrieved), model=model)
+
+
+def _sources(sections: list[str], retrieved: dict[str, SearchHit]) -> list[RegulationSection]:
+    # Use the text the model actually saw; only sections added by code (the leave rule) need a lookup
+    looked_up: dict[str, RegulationSection] = {}
+    not_retrieved = [s for s in sections if s not in retrieved]
+    if not_retrieved:
+        try:
+            looked_up = {r.section: r for r in get_sections(not_retrieved)}
+        except Exception:  # the answer is already generated; a missing source text must not lose it
+            logger.exception("Could not load section text for %s", not_retrieved)
+
+    sources = []
+    for number in sections:
+        if hit := retrieved.get(number):
+            sources.append(RegulationSection(section=hit.section, page=hit.page, path=hit.path, text=hit.text))
+        elif number in looked_up:
+            sources.append(looked_up[number])
+    return sources

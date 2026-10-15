@@ -17,6 +17,14 @@ class SearchHit:
     score: float
 
 
+@dataclass(frozen=True)
+class RegulationSection:
+    section: str
+    page: int
+    path: str
+    text: str
+
+
 @cache
 def get_collection() -> Collection:
     db = chromadb.PersistentClient(path=str(config.DB_PATH))
@@ -43,3 +51,19 @@ def search(question: str, top_k: int = config.TOP_K,
             hits.append(SearchHit(section=meta["section"], page=meta["page"],
                                   path=path, text=body, score=similarity))
     return hits
+
+
+def get_sections(numbers: list[str]) -> list[RegulationSection]:
+    """Full text of the given sections, in the given order. Unknown numbers are skipped.
+
+    Section numbers are treated as unique, as everywhere else in the pipeline.
+    """
+    if not numbers:
+        return []
+    result = get_collection().get(where={"section": {"$in": numbers}}, include=["documents", "metadatas"])
+    found: dict[str, RegulationSection] = {}
+    for text, meta in zip(result["documents"], result["metadatas"]):
+        path, body = split_chunk(text)
+        found.setdefault(meta["section"], RegulationSection(
+            section=meta["section"], page=meta["page"], path=path, text=body))
+    return [found[n] for n in numbers if n in found]

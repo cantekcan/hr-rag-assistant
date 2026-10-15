@@ -55,7 +55,8 @@ def embed(texts: list[str]) -> list[list[float]]:
 
 def _generate_with_fallback(contents: str | list[types.Content],
                             generation_config: types.GenerateContentConfig,
-                            rounds: int = 3) -> types.GenerateContentResponse:
+                            rounds: int = 3) -> tuple[types.GenerateContentResponse, str]:
+    """The first usable response, with the model version that produced it."""
     for r in range(rounds):
         for model in config.GENERATION_MODELS:
             try:
@@ -68,7 +69,8 @@ def _generate_with_fallback(contents: str | list[types.Content],
                 continue
             if not response.candidates:  # e.g. blocked by a safety filter
                 raise LLMError(f"{model} returned no answer.")
-            return response
+            # The API reports the resolved version behind an alias; fall back to the name we asked for
+            return response, response.model_version or model
         if r < rounds - 1:
             wait = 5 * (r + 1)
             logger.warning("All models busy, retrying in %s seconds", wait)
@@ -78,15 +80,20 @@ def _generate_with_fallback(contents: str | list[types.Content],
 
 def generate(prompt: str, schema: type[SchemaT]) -> SchemaT:
     """Ask the model for JSON matching `schema` and return it as a typed object."""
-    response = _generate_with_fallback(prompt, types.GenerateContentConfig(
+    return generate_with_model(prompt, schema)[0]
+
+
+def generate_with_model(prompt: str, schema: type[SchemaT]) -> tuple[SchemaT, str]:
+    """Like generate, and also returns the model version that answered (models fall back to each other)."""
+    response, model = _generate_with_fallback(prompt, types.GenerateContentConfig(
         temperature=0,  # consistent answers for the same question
         response_mime_type="application/json",
         response_schema=schema,
     ))
     if isinstance(response.parsed, schema):
-        return response.parsed
+        return response.parsed, model
     try:
-        return schema.model_validate_json(response.text or "")
+        return schema.model_validate_json(response.text or ""), model
     except ValidationError as e:
         raise LLMError("The model's answer did not match the expected format.") from e
 
@@ -94,8 +101,9 @@ def generate(prompt: str, schema: type[SchemaT]) -> SchemaT:
 def chat_with_tools(contents: list[types.Content],
                     tools: list[types.FunctionDeclaration]) -> types.GenerateContentResponse:
     """One model turn that may request tool calls. Our code runs the tools, never the SDK."""
-    return _generate_with_fallback(contents, types.GenerateContentConfig(
+    response, _ = _generate_with_fallback(contents, types.GenerateContentConfig(
         temperature=0,
         tools=[types.Tool(function_declarations=tools)],
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     ))
+    return response

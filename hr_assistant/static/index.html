@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>İK Asistanı</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>İK Asistanı</h1>
+      <p>Personel yönetmeliğine dayanarak yanıt verir</p>
+    </div>
+    <div class="topbar-actions">
+      <a id="open-document" class="ghost-button" href="/document" target="_blank" rel="noopener">Yönetmeliği aç</a>
+      <label class="who">
+        <span>Kim olarak soruyorsunuz?</span>
+        <select id="employee" aria-label="Kim olarak soruyorsunuz?">
+          <option value="">Giriş yapmadan</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <div class="layout">
+    <main class="chat">
+      <div id="messages" class="messages" aria-live="polite">
+        <section id="welcome" class="welcome">
+          <h2>Yönetmelikte ne yazıyorsa onu söylerim.</h2>
+          <p>Her yanıtın altında dayandığı maddeler yer alır. Maddeye tıklayınca yönetmelikteki metnini görürsünüz. Yönetmelikte olmayan konularda tahmin yürütmem, bunu açıkça belirtirim.</p>
+          <p class="examples-title">Örnek sorular</p>
+          <ul id="examples" class="examples"></ul>
+        </section>
+      </div>
+
+      <form id="composer" class="composer">
+        <textarea id="question" rows="1" maxlength="1000" placeholder="Sorunuzu yazın" aria-label="Sorunuz" required></textarea>
+        <button id="send" type="submit">Sor</button>
+      </form>
+      <p class="composer-hint">Her soru ayrı yanıtlanır, önceki mesajlar hatırlanmaz. Enter gönderir, Shift+Enter yeni satır.</p>
+    </main>
+
+    <aside id="source" class="source" hidden aria-labelledby="source-number">
+      <div class="source-head">
+        <span class="source-kind">Yönetmelik maddesi</span>
+        <button id="source-close" class="ghost-button" type="button" aria-label="Maddeyi kapat">Kapat</button>
+      </div>
+      <p id="source-number" class="source-number"></p>
+      <p id="source-path" class="source-path"></p>
+      <p id="source-text" class="source-text"></p>
+      <p class="source-page">
+        <span id="source-page"></span>
+        <a id="source-open" href="/document" target="_blank" rel="noopener">Belgede göster</a>
+      </p>
+    </aside>
+  </div>
+
+  <dialog id="viewer" class="viewer" aria-labelledby="viewer-title">
+    <div class="viewer-head">
+      <h2 id="viewer-title">İnsan Kaynakları Yönetmeliği</h2>
+      <a id="viewer-new-tab" href="/document" target="_blank" rel="noopener">Yeni sekmede aç</a>
+      <button id="viewer-close" class="ghost-button" type="button">Kapat</button>
+    </div>
+    <div id="viewer-frame" class="viewer-frame"></div>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

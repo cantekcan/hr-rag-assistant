@@ -17,6 +17,8 @@ def print_answer(question: str, employee: Employee | None) -> None:
         print(f"\nKaynak maddeler: {', '.join(result.sections)}")
     if result.tools_used:
         print(f"Kullanılan araçlar: {', '.join(result.tools_used)}")
+    if result.model:
+        print(f"Yanıtı yazan model: {result.model}")
     print("-" * 60)
 
 

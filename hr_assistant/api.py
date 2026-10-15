@@ -1,15 +1,21 @@
-"""HTTP API for the HR assistant.
+"""HTTP API and chat page for the HR assistant.
 
 Run with: uvicorn hr_assistant.api:app --reload
+Chat page: http://127.0.0.1:8000
+Regulation PDF: http://127.0.0.1:8000/document
 Interactive docs: http://127.0.0.1:8000/docs
 """
 import logging
 from dataclasses import asdict
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StringConstraints
 
+from hr_assistant import config
 from hr_assistant.answer import answer_question
 from hr_assistant.employees import get_employee, list_employees
 from hr_assistant.llm import LLMError
@@ -17,11 +23,14 @@ from hr_assistant.retrieval import get_collection
 
 logger = logging.getLogger(__name__)
 
+STATIC_DIR = Path(__file__).parent / "static"
+
 app = FastAPI(
     title="HR Assistant API",
     description="Answers employee questions using the company HR regulation, with source sections.",
-    version="1.0.0",
+    version="1.1.0",
 )
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 Question = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
 
@@ -32,12 +41,23 @@ class AskRequest(BaseModel):
     employee_id: str | None = Field(default=None, examples=["E1002"])
 
 
+class Source(BaseModel):
+    section: str
+    page: int
+    path: str = Field(description="Where the section sits in the document.")
+    text: str
+
+
 class AskResponse(BaseModel):
     answer: str
     sections: list[str] = Field(description="Regulation sections the answer is based on.")
     refused: bool = Field(description="True when the answer is not based on the regulation.")
     missing_info: list[str] = Field(description="Parts of the question the regulation does not cover.")
+    missing_info_note: str | None = Field(
+        description="The 'not covered' sentence, already included at the end of answer.")
     tools_used: list[str] = Field(description="Tools the model called while gathering information.")
+    sources: list[Source] = Field(description="Text of the cited sections, for showing the source.")
+    model: str | None = Field(description="Model that wrote the answer; null for fixed replies.")
 
 
 class EmployeeSummary(BaseModel):
@@ -49,6 +69,20 @@ class EmployeeSummary(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     indexed_chunks: int
+
+
+@app.get("/", include_in_schema=False)
+def chat_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/document", response_class=FileResponse)
+def document() -> FileResponse:
+    """The regulation PDF the answers are based on, shown in the browser."""
+    if not config.DOCUMENT_PATH.is_file():
+        raise HTTPException(status_code=404, detail="Regulation document not found.")
+    return FileResponse(config.DOCUMENT_PATH, media_type="application/pdf",
+                        filename=config.DOCUMENT_PATH.name, content_disposition_type="inline")
 
 
 @app.get("/health")
