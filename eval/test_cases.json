@@ -56,6 +56,21 @@
     "id": "pregnancy-leave-and-severance",
     "question": "çok heycanlıyım karım gebe, o da burada çalışıyor, biz ne kadar izin alacağız ve karım gebelikten sonra ayrılacak tazminatını hesaplar mısın",
     "expected_sections": ["5.7.5.1", "5.7.5.1.1", "5.7.8.3"],
-    "expected_keywords": [["8", "sekiz"], ["1,5", "bir buçuk"], ["6", "altı"], ["3", "üç"]]
+    "expected_keywords": [["8", "sekiz"], ["1,5", "bir buçuk", "birbuçuk"], ["6", "altı"], ["3", "üç"]],
+    "expect_missing_info": true
+  },
+  {
+    "id": "leave-balance-mid-seniority",
+    "employee_id": "E1002",
+    "question": "Bu yıl kaç gün yıllık iznim kaldı?",
+    "expected_sections": ["5.7.4.2"],
+    "expected_keywords": [["8", "sekiz"]]
+  },
+  {
+    "id": "leave-balance-not-eligible",
+    "employee_id": "E1003",
+    "question": "Yıllık izne çıkabilir miyim?",
+    "expected_sections": ["5.7.4"],
+    "expected_keywords": [["bir tam yıl", "bir yıl", "1 yıl"]]
   }
 ]

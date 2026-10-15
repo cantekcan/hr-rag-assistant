@@ -6,19 +6,23 @@ import json
 import re
 import time
 from dataclasses import dataclass
+from datetime import date
 
 from hr_assistant import config
 from hr_assistant.answer import answer_question
+from hr_assistant.employees import get_employee
 
 SECTION_NUMBER = re.compile(r"\d+(?:\.\d+)+")
 PAUSE_SECONDS = 4  # stay under the free tier request limit
+EVAL_DATE = date(2026, 10, 15)  # fixed so leave balances in the test cases do not change over time
 
 
 @dataclass(frozen=True)
 class CaseResult:
     id: str
     passed: bool
-    retrieval: float | None  # share of expected sections used; None for questions the document does not cover
+    # Share of expected sections the answer cites; None for questions the document does not cover
+    citation_recall: float | None
     detail: str
 
 
@@ -36,7 +40,8 @@ def contains_keyword(answer: str, keyword: str) -> bool:
 
 
 def evaluate_case(case: dict) -> CaseResult:
-    result = answer_question(case["question"])
+    employee = get_employee(case["employee_id"]) if "employee_id" in case else None
+    result = answer_question(case["question"], employee, today=EVAL_DATE)
     answer = normalize(result.answer)
 
     if case.get("expect_no_answer"):
@@ -47,9 +52,9 @@ def evaluate_case(case: dict) -> CaseResult:
                           detail if passed else "answered as if the document covered it")
 
     expected = case["expected_sections"]
-    retrieval = len([s for s in expected if s in result.sections]) / len(expected)
+    citation_recall = len([s for s in expected if s in result.sections]) / len(expected)
     if result.refused:
-        return CaseResult(case["id"], False, retrieval, "refused but answer exists")
+        return CaseResult(case["id"], False, citation_recall, "refused but answer exists")
 
     missing = [group for group in case["expected_keywords"]
                if not any(contains_keyword(answer, word) for word in group)]
@@ -60,7 +65,10 @@ def evaluate_case(case: dict) -> CaseResult:
         problems.append(f"missing: {missing}")
     if unwanted:
         problems.append(f"unwanted: {unwanted}")
-    return CaseResult(case["id"], not problems, retrieval, "; ".join(problems) or "ok")
+    if case.get("expect_missing_info") and not result.missing_info:
+        # Part of the question is not in the document and must be flagged, not answered
+        problems.append("uncovered part not flagged")
+    return CaseResult(case["id"], not problems, citation_recall, "; ".join(problems) or "ok")
 
 
 def main() -> None:
@@ -69,15 +77,16 @@ def main() -> None:
     for case in cases:
         r = evaluate_case(case)
         results.append(r)
-        retrieval = "-" if r.retrieval is None else f"{r.retrieval:.0%}"
-        print(f"[{'PASS' if r.passed else 'FAIL'}] {r.id:<32} retrieval: {retrieval:<5} {r.detail}")
+        recall = "-" if r.citation_recall is None else f"{r.citation_recall:.0%}"
+        print(f"[{'PASS' if r.passed else 'FAIL'}] {r.id:<32} citations: {recall:<5} {r.detail}")
         time.sleep(PAUSE_SECONDS)
 
     passed = sum(r.passed for r in results)
-    scored = [r.retrieval for r in results if r.retrieval is not None]
+    scored = [r.citation_recall for r in results if r.citation_recall is not None]
     print("-" * 72)
     print(f"Answers correct: {passed}/{len(results)}")
-    print(f"Average retrieval recall: {sum(scored) / len(scored):.0%}")
+    if scored:
+        print(f"Average citation recall: {sum(scored) / len(scored):.0%}")
 
 
 if __name__ == "__main__":

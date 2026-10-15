@@ -1,0 +1,6 @@
+[
+  {"id": "E1001", "name": "Ayşe Yılmaz", "department": "Muhasebe", "start_date": "2023-03-01", "used_leave_days": 5},
+  {"id": "E1002", "name": "Mehmet Demir", "department": "Bilgi Teknolojileri", "start_date": "2016-06-15", "used_leave_days": 12},
+  {"id": "E1003", "name": "Zeynep Kaya", "department": "Satış", "start_date": "2026-08-01", "used_leave_days": 0},
+  {"id": "E1004", "name": "Ali Çelik", "department": "Operasyon", "start_date": "2008-01-10", "used_leave_days": 24}
+]

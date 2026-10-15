@@ -6,3 +6,5 @@ __pycache__/
 *.ipynb
 chroma_db/
 documents/
+tests/
+pytest.ini
