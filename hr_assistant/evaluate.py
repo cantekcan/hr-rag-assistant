@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from datetime import date
 
 from hr_assistant import config
-from hr_assistant.answer import answer_question
-from hr_assistant.employees import get_employee
+from hr_assistant.answer import AnswerResult, answer_question
+from hr_assistant.employees import Employee, get_employee
 
 SECTION_NUMBER = re.compile(r"\d+(?:\.\d+)+")
 PAUSE_SECONDS = 4  # stay under the free tier request limit
@@ -39,9 +39,15 @@ def contains_keyword(answer: str, keyword: str) -> bool:
     return re.search(pattern, text) is not None
 
 
+def case_employee(case: dict) -> Employee | None:
+    return get_employee(case["employee_id"]) if "employee_id" in case else None
+
+
 def evaluate_case(case: dict) -> CaseResult:
-    employee = get_employee(case["employee_id"]) if "employee_id" in case else None
-    result = answer_question(case["question"], employee, today=EVAL_DATE)
+    return score_case(case, answer_question(case["question"], case_employee(case), today=EVAL_DATE))
+
+
+def score_case(case: dict, result: AnswerResult) -> CaseResult:
     answer = normalize(result.answer)
 
     if case.get("expect_no_answer"):

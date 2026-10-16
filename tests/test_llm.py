@@ -26,6 +26,7 @@ def fake(monkeypatch):
     def install(*outcomes):
         models = FakeModels(outcomes)
         monkeypatch.setattr(llm, "_client", lambda: SimpleNamespace(models=models))
+        monkeypatch.setattr(config, "GROQ_API_KEY", None)  # Gemini only, even if .env has a Groq key
         monkeypatch.setattr(llm.time, "sleep", lambda seconds: None)
         monkeypatch.setattr(config, "GENERATION_MODELS", ["first", "second"])
         return models

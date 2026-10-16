@@ -1,5 +1,6 @@
 """Turns a question into a grounded answer: gather facts, structured answer, validation, routing."""
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field
 from hr_assistant import llm
 from hr_assistant.employees import Employee, LeaveBalance
 from hr_assistant.retrieval import RegulationSection, SearchHit, get_sections
-from hr_assistant.tools import gather
+from hr_assistant.tools import GatheredFacts, gather
 
 logger = logging.getLogger(__name__)
 
@@ -98,15 +99,23 @@ def _refusal(question: str, tools_used: list[str]) -> AnswerResult:
                         refused=True, tools_used=tools_used)
 
 
+# Writes the structured answer from a prompt; returns it with the name of the model that wrote it
+Writer = Callable[[str, type[HRAnswer]], tuple[HRAnswer, str]]
+
+
 def answer_question(question: str, employee: Employee | None = None,
                     today: date | None = None) -> AnswerResult:
-    facts = gather(question, employee, today)
+    return write_answer(question, gather(question, employee, today))
+
+
+def write_answer(question: str, facts: GatheredFacts, writer: Writer | None = None) -> AnswerResult:
+    """The answer step on its own, so several models can write from the same gathered facts."""
     if not facts.hits and not facts.leave_balance:
         return _refusal(question, facts.tools_used)
 
     context = _format_context(facts.hits, facts.leave_balance)
     prompt = f"{ANSWER_INSTRUCTIONS}\n\nExcerpts:\n{context}\n\nQuestion: {question}"
-    result, model = llm.generate_with_model(prompt, schema=HRAnswer)
+    result, model = (writer or llm.generate_with_model)(prompt, HRAnswer)
     if not result.can_answer:
         return _refusal(question, facts.tools_used)
 

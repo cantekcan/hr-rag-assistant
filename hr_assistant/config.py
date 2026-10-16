@@ -17,6 +17,12 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GENERATION_MODELS = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-3.8-flash"]
 EMBEDDING_MODEL = "gemini-embedding-001"
 
+# Optional: Groq models compared against Gemini by python -m hr_assistant.compare
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
+# These models fail in Groq's strict schema mode (json_validate_failed) but work in JSON mode
+GROQ_JSON_MODE_MODELS = {"qwen/qwen3.8-27b"}
+
 TOP_K = 5
 SIMILARITY_THRESHOLD = 0.6
 MAX_CONTEXT_SECTIONS = 8   # sections passed to the answer step across all searches
