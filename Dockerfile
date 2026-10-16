@@ -3,8 +3,10 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Install dependencies first so this layer is cached when only the code changes
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Exact versions with hashes (regenerate after editing requirements.txt, see README),
+# wheels only, so no package runs a setup script during the build
+COPY requirements.lock .
+RUN pip install --no-cache-dir --only-binary :all: --require-hashes -r requirements.lock
 
 COPY hr_assistant/ hr_assistant/
 COPY eval/ eval/

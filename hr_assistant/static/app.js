@@ -265,7 +265,7 @@ els.form.addEventListener("submit", (event) => {
   const question = els.question.value;
   els.question.value = "";
   resizeInput();
-  ask(question);
+  void ask(question);  // errors are handled inside ask
 });
 
 els.question.addEventListener("keydown", (event) => {
@@ -306,6 +306,6 @@ els.viewer.addEventListener("click", (event) => {
 els.viewer.addEventListener("close", () => els.viewerFrame.replaceChildren());
 
 renderExamples();
-checkHealth();
-loadEmployees();
+void checkHealth();    // both handle their own errors
+void loadEmployees();
 els.question.focus();

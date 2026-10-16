@@ -106,6 +106,9 @@ Unit tests: `pip install -r requirements-dev.txt`, then `pytest`.
 
 With Docker: `docker compose up --build`, then run the ingest step once inside the container (`docker compose exec api python -m hr_assistant.ingest`). The container runs as a non-root user (uid 1000); on Linux the mounted `chroma_db` folder must be writable by that user.
 
+The Docker image installs from `requirements.lock` (exact versions with hashes, wheels only). After changing `requirements.txt`, regenerate it with `pip install uv`, then:
+`uv pip compile requirements.txt --python-version 3.12 --python-platform x86_64-manylinux_2_28 --generate-hashes -o requirements.lock`
+
 ## Project structure
 
 ```
