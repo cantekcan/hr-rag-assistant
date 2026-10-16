@@ -128,7 +128,7 @@ tests/                unit tests
 
 ## About the data
 
-The regulation used during development is a third-party sample document and is not included in the repository. `/document` serves whatever PDF is in `documents/`, so a public deployment should use a document you have the right to publish. Any regulation numbered by section (`1.`, `1.1.`, `1.1.1.`) works with the same pipeline.
+The regulation is a publicly available document. The PDF and its prebuilt index (`chroma_db/`) are in the repository, so the app starts without running ingest. Any regulation numbered by section (`1.`, `1.1.`, `1.1.1.`) works with the same pipeline. Employee data (`data/employees.json`) is synthetic.
 
 The seniority table in `employees.py` is copied from section 5.7.4 of that document (14 days up to 5 years, 20 days up to 15 years, 24 days after). It is not the Turkish Labour Law: the law gives 26 days from 15 years on and puts exactly 15 years in the top tier. Whether exactly 5 and 15 years belong to the lower or upper tier must be checked against the regulation's wording, and the table must be updated when a different regulation is used.
 

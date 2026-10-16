@@ -25,3 +25,7 @@ MAX_TOOL_STEPS = 4         # model turns allowed for gathering information
 # Free tier allows about 100 embedding requests per minute
 EMBED_BATCH_SIZE = 20
 EMBED_BATCH_PAUSE_SECONDS = 15
+
+# Questions per hour, per client and for everyone together; 0 turns the limit off (e.g. in .env for development)
+RATE_LIMIT_PER_CLIENT = int(os.getenv("RATE_LIMIT_PER_CLIENT", "20"))
+RATE_LIMIT_TOTAL = int(os.getenv("RATE_LIMIT_TOTAL", "200"))

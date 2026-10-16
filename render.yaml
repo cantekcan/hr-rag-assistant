@@ -1,0 +1,10 @@
+# Render Blueprint: New > Blueprint, pick this repository, then enter the API key when asked
+services:
+  - type: web
+    name: hr-rag-assistant
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false   # secret: entered in the Render dashboard, never stored in the repository

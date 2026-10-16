@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from hr_assistant import api, config
 from hr_assistant.answer import AnswerResult
 from hr_assistant.llm import LLMError
+from hr_assistant.rate_limit import RateLimiter
 from hr_assistant.retrieval import RegulationSection
 
 SOURCE = RegulationSection(section="5.7.4.2", page=7, path="5.7. İzinler > 5.7.4. Yıllık izin",
@@ -12,7 +13,8 @@ SOURCE = RegulationSection(section="5.7.4.2", page=7, path="5.7. İzinler > 5.7.
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setattr(api, "limiter", RateLimiter(per_client=0, total=0))  # tests are not rate limited
     return TestClient(api.app)
 
 
@@ -75,3 +77,12 @@ def test_document_is_served_inline(client, monkeypatch, tmp_path):
 def test_missing_document_returns_404(client, monkeypatch, tmp_path):
     monkeypatch.setattr(config, "DOCUMENT_PATH", tmp_path / "missing.pdf")
     assert client.get("/document").status_code == 404
+
+
+def test_too_many_questions_returns_429(client, monkeypatch):
+    monkeypatch.setattr(api, "limiter", RateLimiter(per_client=1, total=100))
+    monkeypatch.setattr(api, "answer_question", answer_with(AnswerResult(answer="Tamam.")))
+    assert client.post("/ask", json={"question": "Bir"}).status_code == 200
+    response = client.post("/ask", json={"question": "İki"})
+    assert response.status_code == 429
+    assert "retry-after" in response.headers

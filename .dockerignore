@@ -4,7 +4,5 @@
 __pycache__/
 .ipynb_checkpoints/
 *.ipynb
-chroma_db/
-documents/
 tests/
 pytest.ini

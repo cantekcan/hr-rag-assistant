@@ -10,6 +10,7 @@ const EXAMPLES = [
 const SIGNED_IN_EXAMPLE = "Bu yıl kaç gün yıllık iznim kaldı?";
 
 const ERROR_MESSAGES = {
+  429: "Kısa sürede çok fazla soru soruldu. Lütfen biraz sonra tekrar deneyin.",
   503: "Dil modeline şu an ulaşılamıyor. Birkaç dakika sonra tekrar deneyin.",
   404: "Seçilen çalışan bulunamadı. Sayfayı yenileyip tekrar seçin.",
   422: "Soru boş olamaz ve en fazla 1000 karakter olabilir.",

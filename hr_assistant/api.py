@@ -10,7 +10,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StringConstraints
@@ -19,11 +19,15 @@ from hr_assistant import config
 from hr_assistant.answer import answer_question
 from hr_assistant.employees import get_employee, list_employees
 from hr_assistant.llm import LLMError
+from hr_assistant.rate_limit import RateLimiter
 from hr_assistant.retrieval import get_collection
 
 logger = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).parent / "static"
+RETRY_AFTER_SECONDS = 600
+
+limiter = RateLimiter(per_client=config.RATE_LIMIT_PER_CLIENT, total=config.RATE_LIMIT_TOTAL)
 
 app = FastAPI(
     title="HR Assistant API",
@@ -101,15 +105,19 @@ def employees() -> list[EmployeeSummary]:
 
 
 @app.post("/ask")
-def ask(request: AskRequest) -> AskResponse:
+def ask(body: AskRequest, request: Request) -> AskResponse:
+    # Behind a proxy (Render) the client address comes from X-Forwarded-For, see --proxy-headers
+    if not limiter.allow(request.client.host if request.client else "unknown"):
+        raise HTTPException(status_code=429, detail="Too many questions, try again later.",
+                            headers={"Retry-After": str(RETRY_AFTER_SECONDS)})
     employee = None
-    if request.employee_id:
-        employee = get_employee(request.employee_id)
+    if body.employee_id:
+        employee = get_employee(body.employee_id)
         if employee is None:
             raise HTTPException(status_code=404, detail="Employee not found.")
     # A plain "def" endpoint runs in a worker thread, so slow model calls do not block other requests
     try:
-        result = answer_question(request.question, employee)
+        result = answer_question(body.question, employee)
     except LLMError:
         logger.exception("Language model request failed")
         raise HTTPException(status_code=503, detail="Language model is unavailable, try again later.")
